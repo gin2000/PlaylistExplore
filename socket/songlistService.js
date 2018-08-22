@@ -3,6 +3,13 @@ const fecha = require('fecha');
 
 let ownerInfoMap = {};
 
+function calculate_song(base, playlistInfo) {
+    playlistInfo.forEach((element) => {
+        base += element.playlistInfo.songList.length;
+    });
+    return base;
+}
+
 function songlistService(socket) {
     socket.on('publishNewPlaylist', async (playlistInfo) => {
         playlistInfo['token'] = socket.handshake.session.token;
@@ -16,6 +23,27 @@ function songlistService(socket) {
         console.log(date);
         let latestplaylistInfo = await songListTable.getLatestPlaylists(5, date, socket.handshake.session.token, false);
         socket.emit('getLatestPlaylists', latestplaylistInfo);
+    });
+
+    socket.on('getLatestThrity', async (date) => {
+        date = fecha.format(new Date(date), 'YYYY-MM-DD HH:mm:ss');
+        console.log(date);
+        let ret = [];
+        let songNum = 0;
+        while (songNum < 30) {
+            let latestplaylistInfo = await songListTable.getLatestPlaylists(5, date, socket.handshake.session.token, false);
+            if (latestplaylistInfo.length == 0) break;
+            let last = latestplaylistInfo.length - 1;
+            console.log(last);
+            date = latestplaylistInfo[last].playlistInfo.date;
+            songNum += calculate_song(songNum, latestplaylistInfo);
+            latestplaylistInfo.forEach((element) => {
+                ret.push(element);
+            });
+        }
+        console.log(songNum);
+        console.log(ret);
+        socket.emit('getLatestThrity', ret);
     });
 
     socket.on('getOwnerInfo', async (pageInfo) => {
